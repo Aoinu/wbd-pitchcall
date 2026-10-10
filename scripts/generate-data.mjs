@@ -21,7 +21,7 @@ for(const g of games){
  if(es.some(p=>!p.pitchType||!Number.isFinite(p.pitchSpeedKmh)||!p.pitchLocationPoint))throw Error('Missing display data');
  const key=JSON.stringify([g.leagueType,g.seasonId,e.pitcherId,e.batterId,e.pitcherHand,e.batterSide,es.length]);
  const id=hash(g.gameId+':'+e.plateAppearanceId);
- const pa={id,date:g.gameDate,matchup:`${g.awayTeamName} @ ${g.homeTeamName}`,result:e.result,confidence:e.resultResolution?.confidence??'unknown',pitches:es.map(p=>({type:p.pitchType,speed:p.pitchSpeedKmh,x:p.pitchLocationPoint.x,y:p.pitchLocationPoint.y,height:p.batterHeightCm??null,count:p.count,call:p.resolvedCall,result:p.pitchResult}))};
+ const pa={id,date:g.gameDate,matchup:`${g.awayTeamName} @ ${g.homeTeamName}`,result:e.result,batterSide:e.batterSide,confidence:e.resultResolution?.confidence??'unknown',pitches:es.map(p=>({type:p.pitchType,speed:p.pitchSpeedKmh,x:p.pitchLocationPoint.x,y:p.pitchLocationPoint.y,height:p.batterHeightCm??null,count:p.count,call:p.resolvedCall,result:p.pitchResult}))};
  appearances.set(id,pa);
  if(!groups.has(key))groups.set(key,{pitcherId:e.pitcherId,batterId:e.batterId,pitcherName:e.pitcherDisplayName,batterName:e.batterDisplayName,pitcherHand:e.pitcherHand,batterSide:e.batterSide,hr:[],outs:[]});
  groups.get(key)[e.result==='home_run'?'hr':'outs'].push(pa);
@@ -31,6 +31,15 @@ const questions=[];
 for(const g of groups.values())for(const hr of g.hr)for(const out of g.outs){
  for(const [id,name] of [[g.pitcherId,g.pitcherName],[g.batterId,g.batterName]])players[id]??={name,pitching:{},batting:{}};
  questions.push({id:hash(hr.id+':'+out.id),pitcherId:g.pitcherId,batterId:g.batterId,pitcherHand:g.pitcherHand,batterSide:g.batterSide,out,hr});
+}
+const candidateQuestionCount=questions.length;
+const eligibleQuestions=questions.filter(q=>[q.out,q.hr].every(pa=>{
+ const p=pa.pitches.at(-1);return Math.abs(p.x)<=1.2&&Math.abs(p.y)<=1.2;
+}));
+const ineligibleQuestionCount=candidateQuestionCount-eligibleQuestions.length;
+for(const q of eligibleQuestions)for(const pa of [q.out,q.hr])for(const pitch of pa.pitches){
+ pitch.x=Math.max(-2,Math.min(2,pitch.x));
+ pitch.y=Math.max(-2,Math.min(2,pitch.y));
 }
 // Hints retain matchup handedness and include every available season in the three scopes.
 for(const g of games)for(const e of g.events){
@@ -46,7 +55,7 @@ for(const g of games)for(const e of g.events){
  }
 }
 const dates=games.map(g=>g.gameDate).sort();
-const metadata={schemaVersion:1,title:'WBD Pitchcall',league:'official',season:'official_2026_summer',generatedAt:new Date().toISOString(),snapshotAt:d.manifest.createdAt,sourceBuild:d.manifest.source.activeBuildId,questionCount:questions.length,questionGames:games.filter(g=>g.leagueType==='official'&&g.seasonId==='official_2026_summer').length,hintScope:['official','independent','other'],hintGames:games.length,hintDates:[dates[0],dates.at(-1)],coordinateSystem:'WBD zoneX/zoneY; catcher view',selection:'Same pitcher/batter IDs, handedness, pitch count, league and season. Complete sequences only. Excludes batter-safe outs, double plays and unfinished appearances.'};
-questions.sort((a,b)=>a.id.localeCompare(b.id));
-await writeFile('site/data/questions.json',JSON.stringify({metadata,players,questions},null,2)+'\n');
-console.log(JSON.stringify({questionCount:questions.length,hintGames:games.length,players:Object.keys(players).length}));
+const metadata={schemaVersion:1,title:'WBD Pitchcall',league:'official',season:'official_2026_summer',generatedAt:new Date().toISOString(),snapshotAt:d.manifest.createdAt,sourceBuild:d.manifest.source.activeBuildId,candidateQuestionCount,questionCount:eligibleQuestions.length,ineligibleQuestionCount,ineligiblePercent:candidateQuestionCount?ineligibleQuestionCount/candidateQuestionCount*100:0,finalPitchCoordinateLimit:1.2,coordinateClamp:2,questionGames:games.filter(g=>g.leagueType==='official'&&g.seasonId==='official_2026_summer').length,hintScope:['official','independent','other'],hintGames:games.length,hintDates:[dates[0],dates.at(-1)],coordinateSystem:'WBD zoneX/zoneY; pitcher view',selection:'Same pitcher/batter IDs, handedness, pitch count, league and season. Complete sequences only. Excludes batter-safe outs, double plays and unfinished appearances.'};
+eligibleQuestions.sort((a,b)=>a.id.localeCompare(b.id));
+await writeFile('site/data/questions.json',JSON.stringify({metadata,players,questions:eligibleQuestions},null,2)+'\n');
+console.log(JSON.stringify({candidateQuestionCount,questionCount:eligibleQuestions.length,ineligibleQuestionCount,ineligiblePercent:metadata.ineligiblePercent,hintGames:games.length,players:Object.keys(players).length}));
