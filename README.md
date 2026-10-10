@@ -1,0 +1,46 @@
+# WBD Pitchcall
+
+同じ投手・打者の配球から、実際に打ち取った打席を選ぶゲーム。
+
+**公開サイト： https://aoinu.github.io/wbd-pitchcall/**
+
+## データとルール
+
+- 出題：WBD Metrics Viewerの分析対象canonicalデータ、Official 2026 Summerの56ペア。
+- 同じ投手ID・打者ID・投打の左右・球数・League・Season。カウントや位置の一致は不要。1球打席も含む。
+- 本塁打 vs 三振・ゴロアウト・フライアウト。未完了・投球欠落・打者セーフ記録と矛盾するアウト・併殺・途中で対戦条件が変わる打席は除外。
+- アウトはWBDMVの打席復元結果。状態推定を含む。回答後の投球一覧に推定結果を注記。
+- ヒント：Official＋Independent＋Otherの取得時点で利用可能な全期間、385試合。投手は対戦打者の左右、打者は対戦投手の左右で分ける。出題後の成績も含む。
+- 空振り率＝resolvedCallがswingの球数÷スイング数。スイングはswing・contact・foul。平均球速は球速が有効な球のみ。打席数はterminalの球数。
+- コース：捕手視点のzoneX/zoneY。ゾーンの横・縦をそれぞれ±1として正規化表示。捕手の要求位置を示すものではない。
+- 結果は回答前の画面で伏せるが、公開JSONから取得可能。競技的な不正防止機構はない。
+
+データ取得日時・元ビルド・ヒントの対象期間は `site/data/questions.json` のmetadataに記録する。問題に必要な投球情報と選手ヒントのみ公開し、raw CSV、認証情報、D1の全データは収録しない。
+
+## ローカル表示と検証
+
+Node.js 24、pnpm 10.34.4。追加依存のインストールは不要。
+
+```sh
+pnpm check
+pnpm serve
+```
+
+http://127.0.0.1:8080/ にアクセス。実装はbuild不要のHTML/CSS/ES modules。Bootstrap 5.3.8のCSSを同梱。
+
+## 問題の更新
+
+WBDMVの承認済み読み取り専用スナップショットを使う。生成処理自体は本番に接続しない。
+
+```sh
+node scripts/generate-data.mjs /path/to/wbd-metrics-viewer <dataset-id>
+pnpm check
+```
+
+WBDMVの `validateDataset` でmanifest、ファイルサイズ、チェックサムを検証し、`buildCanonicalGames` で選手IDと打席を復元する。出題はOfficial 2026 Summer、ヒントは3スコープ全期間から再集計。WBDMV側のanalyze-and-publishパッケージがbuild済みであることが必要。
+
+生成したJSONをレビューしてmainへ反映すると、GitHub Actionsが検証し、`site/`だけをGitHub Pagesへデプロイする。PagesのSourceはGitHub Actionsに設定する。PRでは検証のみ実行する。
+
+## クレジット
+
+ゲームの着想：[PITCHCALL](https://pitchcall.pages.dev/)（@Eikura__Metrics）。UI・コード・問題データはWBD向けに作成。Bootstrapのライセンスは `site/vendor/LICENSE.bootstrap`。

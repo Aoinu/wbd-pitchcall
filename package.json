@@ -1,0 +1,10 @@
+{
+  "name": "wbd-pitchcall",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.4",
+  "scripts": {
+    "check": "node --check site/app.js && node --check scripts/generate-data.mjs && node scripts/validate-data.mjs",
+    "serve": "python3 -m http.server 8080 --bind 127.0.0.1 --directory site"
+  }
+}
