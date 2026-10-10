@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const d=JSON.parse(await readFile(new URL('../site/data/questions.json',import.meta.url),'utf8'));
+const profileImageIndex=JSON.parse(await readFile(new URL('../site/data/profile-image-index.json',import.meta.url),'utf8'));
 assert.deepEqual(d.metadata.questionScope,['official','independent','other']);
 assert.equal(d.metadata.questionCount,d.questions.length);assert.ok(d.questions.length>0);
 assert.equal(d.metadata.candidateQuestionCount,d.metadata.questionCount+d.metadata.ineligibleQuestionCount);
 assert.equal(d.metadata.coordinateClamp,2);assert.equal(d.metadata.finalPitchCoordinateLimit,1.2);
 assert.equal(d.metadata.ineligiblePercent,d.metadata.ineligibleQuestionCount/d.metadata.candidateQuestionCount*100);
 assert.ok(d.metadata.questionPitcherCount>0);assert.ok(d.metadata.questionGames>0);
+assert.equal(d.metadata.profileImageSource,profileImageIndex.sourceUrl);
+assert.equal(d.metadata.profileImageMapEntries,Object.keys(profileImageIndex.playerNameToImageIndex).length);
 assert.equal(d.metadata.questionScopeCounts.reduce((n,s)=>n+s.candidateQuestionCount,0),d.metadata.candidateQuestionCount);
 assert.equal(d.metadata.questionScopeCounts.reduce((n,s)=>n+s.questionCount,0),d.metadata.questionCount);
 assert.deepEqual(new Set(d.metadata.questionScopeCounts.map(s=>s.league)),new Set(d.metadata.questionScope));
@@ -25,4 +28,8 @@ for(const q of d.questions){
 assert.ok((await readFile(new URL('../site/assets/batter-left.png',import.meta.url))).length>0);
 assert.ok((await readFile(new URL('../site/assets/batter-right.png',import.meta.url))).length>0);
 for(const p of Object.values(d.players))for(const role of ['pitching','batting'])for(const s of Object.values(p[role])){assert.ok(s.whiffs<=s.swings);assert.ok(s.swings<=s.pitches);assert.equal(Object.values(s.types).reduce((n,v)=>n+v.pitches,0),s.pitches);}
-console.log(`Validated ${d.questions.length} questions and ${Object.keys(d.players).length} player hints.`);
+const playersWithProfileImage=Object.values(d.players).filter(p=>p.profileImageUrl);
+assert.equal(d.metadata.profileImagePlayerCount,playersWithProfileImage.length);
+assert.equal(d.metadata.profileImageUnmatchedCount,Object.keys(d.players).length-playersWithProfileImage.length);
+for(const p of playersWithProfileImage){assert.ok(Number.isInteger(p.profileImageId)&&p.profileImageId>0);assert.equal(profileImageIndex.playerNameToImageIndex[p.profileImageSourceName],p.profileImageId);assert.equal(p.profileImageUrl,profileImageIndex.imageUrlTemplate.replace('{index}',p.profileImageId));}
+console.log(`Validated ${d.questions.length} questions, ${Object.keys(d.players).length} player hints, and ${playersWithProfileImage.length} profile image mappings.`);
