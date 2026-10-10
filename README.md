@@ -8,6 +8,7 @@
 
 - 出題：WBD Metrics Viewerの分析対象canonicalデータから、Official 2026 Summerに投球実績のある投手に限定。Officialは同じLeague・Season、Independent・OtherはSeason未設定のため同じLeagueから組み合わせ、最終球位置条件を通過した78問（元候補403問）。
 - 同じ投手ID・打者ID・投打の左右・球数。OfficialはSeasonも一致。Independent・OtherはLeague一致で照合。カウントや位置の一致は不要。1球打席も含む。
+- 1ゲーム内では同じ投手・打者IDの組み合わせを重複出題しない。出題数の上限は、選択可能な異なるペア数（最大10問）。
 - 本塁打 vs 三振・ゴロアウト・フライアウト。未完了・投球欠落・打者セーフ記録と矛盾するアウト・併殺・途中で対戦条件が変わる打席は除外。
 - アウトはWBDMVの打席復元結果。状態推定を含む。回答後の投球一覧に推定結果を注記。
 - ヒント：Official＋Independent＋Otherの取得時点で利用可能な全期間、385試合。投手は対戦打者の左右、打者は対戦投手の左右で分ける。出題後の成績も含む。
