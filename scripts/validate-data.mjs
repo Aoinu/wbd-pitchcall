@@ -1,14 +1,22 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const d=JSON.parse(await readFile(new URL('../site/data/questions.json',import.meta.url),'utf8'));
-assert.equal(d.metadata.season,'official_2026_summer');assert.equal(d.metadata.league,'official');
+assert.deepEqual(d.metadata.questionScope,['official','independent','other']);
 assert.equal(d.metadata.questionCount,d.questions.length);assert.ok(d.questions.length>0);
 assert.equal(d.metadata.candidateQuestionCount,d.metadata.questionCount+d.metadata.ineligibleQuestionCount);
 assert.equal(d.metadata.coordinateClamp,2);assert.equal(d.metadata.finalPitchCoordinateLimit,1.2);
 assert.equal(d.metadata.ineligiblePercent,d.metadata.ineligibleQuestionCount/d.metadata.candidateQuestionCount*100);
+assert.ok(d.metadata.questionPitcherCount>0);assert.ok(d.metadata.questionGames>0);
+assert.equal(d.metadata.questionScopeCounts.reduce((n,s)=>n+s.candidateQuestionCount,0),d.metadata.candidateQuestionCount);
+assert.equal(d.metadata.questionScopeCounts.reduce((n,s)=>n+s.questionCount,0),d.metadata.questionCount);
+assert.deepEqual(new Set(d.metadata.questionScopeCounts.map(s=>s.league)),new Set(d.metadata.questionScope));
+assert.equal(new Set(d.metadata.questionScopeCounts.map(s=>JSON.stringify([s.league,s.seasonId]))).size,d.metadata.questionScopeCounts.length);
 const ids=new Set();
 for(const q of d.questions){
  assert.ok(!ids.has(q.id));ids.add(q.id);assert.ok(d.players[q.pitcherId]&&d.players[q.batterId]);
+ assert.ok(d.metadata.questionScope.includes(q.league));
+ if(q.league==='official')assert.ok(typeof q.seasonId==='string'&&q.seasonId.length>0);
+ else assert.equal(q.seasonId,null);
  assert.ok(['left','right'].includes(q.pitcherHand));assert.ok(['left','right'].includes(q.batterSide));
  assert.equal(q.hr.result,'home_run');assert.ok(['strikeout','ground_out','fly_out'].includes(q.out.result));
  assert.notEqual(q.hr.id,q.out.id);assert.equal(q.hr.pitches.length,q.out.pitches.length);assert.ok(q.hr.pitches.length>0);
